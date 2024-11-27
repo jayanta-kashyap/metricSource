@@ -1,6 +1,6 @@
 # metricSource
 This repository contains an open-telemetry metrics generator
-metrics are emitted to the grpc endpoint: 0.0.0.0:4317
+metrics are emitted to the grpc endpoint: **0.0.0.0:4317**
 
 # metrics Generated
 * 10 different resource sets are generated at a time
@@ -15,7 +15,7 @@ docker build -t metric-simulator -f /aboslute/path/to/DockerFile .
 # Run the container
 docker run -d --name metric-simulator-container metric-simulator
 
-# Sample otel collctor Config to receive the emitted metrics
+# Sample otel collctor config to receive the emitted metrics
 
 ```
 receivers:
