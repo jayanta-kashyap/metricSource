@@ -5,7 +5,11 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
-	"sync"
+	"os"
+	"os/signal"
+	"runtime/debug"
+	"strings"
+	"syscall"
 	"time"
 
 	"go.opentelemetry.io/otel"
@@ -16,100 +20,115 @@ import (
 )
 
 func generateRandomFloat() float64 {
-	// Generate random float between 0.00 and 5.00
-	return float64(rand.Intn(500)) / 100.0
+	return float64(rand.Intn(500)) / 100.0 // Generate random float between 0.00 and 5.00
 }
 
-func generateMetrics(ctx context.Context, resourceName string, wg *sync.WaitGroup) {
-	defer wg.Done()
-
-	// Configure gRPC exporter
+func generateMetrics(ctx context.Context, resourceName string) {
 	exporter, err := otlpmetricgrpc.New(ctx,
 		otlpmetricgrpc.WithEndpoint("0.0.0.0:4317"),
-		otlpmetricgrpc.WithInsecure(), // Ensure plain gRPC is used
+		otlpmetricgrpc.WithInsecure(),
 	)
 	if err != nil {
-		log.Fatalf("failed to create exporter: %v", err)
+		log.Printf("Error creating exporter for %s: %v", resourceName, err)
+		return
 	}
 	defer exporter.Shutdown(ctx)
 
-	// Set up resource attributes for this resource
 	res, err := resource.New(ctx,
 		resource.WithAttributes(
 			semconv.ServiceNameKey.String("otel-metrics-generator"),
 			semconv.ServiceVersionKey.String("v1.0.0"),
-			// Resource-specific attribute
 			semconv.DeploymentEnvironmentKey.String(resourceName),
 		),
 	)
 	if err != nil {
-		log.Fatalf("failed to create resource for %s: %v", resourceName, err)
+		log.Printf("Error creating resource for %s: %v", resourceName, err)
+		return
 	}
 
-	// Create a metric provider specific to this resource
 	meterProvider := metric.NewMeterProvider(
 		metric.WithReader(metric.NewPeriodicReader(exporter)),
 		metric.WithResource(res),
 	)
 	defer meterProvider.Shutdown(ctx)
 
-	// Set global meter provider
 	otel.SetMeterProvider(meterProvider)
+	meter := meterProvider.Meter(strings.ToLower("meter-" + resourceName))
 
-	// Create a Meter from the provider
-	meter := meterProvider.Meter(fmt.Sprintf("meter-%s", resourceName))
-
-	// Generate a random number of metrics for this resource
 	numMetrics := rand.Intn(10) + 1 // Random number of metrics between 1 and 10
-
-	// Generate random metrics and data points
 	for i := 1; i <= numMetrics; i++ {
-		// Create metric name as "Metric-X"
-		metricName := fmt.Sprintf("Metric-%d", i)
+		metricName := strings.ToLower(fmt.Sprintf("metric-%d", i))
 
-		// Create a Gauge instrument for this metric
 		gauge, err := meter.Float64Gauge(metricName)
 		if err != nil {
-			log.Fatalf("failed to create gauge for %s: %v", metricName, err)
+			log.Printf("Error creating gauge for %s: %v", metricName, err)
+			return
 		}
 
-		// Generate a random number of data points for this metric
-		numDataPoints := rand.Intn(10) + 1 // Random number of data points between 1 and 10
+		counter, err := meter.Float64Counter(metricName)
+		if err != nil {
+			log.Printf("Error creating counter for %s: %v", metricName, err)
+			return
+		}
 
-		// Record the data points for this metric
+		histogram, err := meter.Float64Histogram(metricName)
+		if err != nil {
+			log.Printf("Error creating histogram for %s: %v", metricName, err)
+			return
+		}
+
+		numDataPoints := rand.Intn(10) + 1
 		for j := 1; j <= numDataPoints; j++ {
 			value := generateRandomFloat()
-			// Record the metric value
 			gauge.Record(ctx, value)
-			log.Printf("Resource %s: Recorded metric %s=%f", resourceName, metricName, value)
+			log.Printf("Resource %s: Recorded gauge %s=%f", resourceName, metricName, value)
+
+			counter.Add(ctx, value)
+			log.Printf("Resource %s: Recorded counter %s=%f", resourceName, metricName, value)
+
+			histogram.Record(ctx, value)
+			log.Printf("Resource %s: Recorded histogram %s=%f", resourceName, metricName, value)
 		}
 	}
 }
 
 func main() {
-	// Set up context for graceful shutdown
-	ctx := context.Background()
-
-	// Define resource names
-	resourceNames := []string{"Resource_A", "Resource_B", "Resource_C", "Resource_D", "Resource_E", "Resource_F", "Resource_G", "Resource_H", "Resource_I", "Resource_J"}
-
-	// Use WaitGroup to wait for all goroutines to finish
-	var wg sync.WaitGroup
-
-	// Run an infinite loop to keep generating metrics indefinitely
-	for {
-		// Start metric generation for each resource
-		for _, resourceName := range resourceNames {
-			wg.Add(1)
-			go generateMetrics(ctx, resourceName, &wg)
+	defer func() {
+		if rcvErr := recover(); rcvErr != nil {
+			log.Printf("Recovered from panic with error: [%v]", rcvErr)
+			debug.PrintStack()
 		}
+		log.Println("Shutting down application gracefully.")
+	}()
 
-		// Wait for all metric generation to complete
-		// Since we're running indefinitely, it will restart the loop after each iteration
-		wg.Wait()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-		// Optionally, sleep for a small duration to avoid overwhelming the system with metric generation
-		// Adjust the sleep duration to your requirements
-		time.Sleep(1 * time.Second) // sleep for 1 second before generating metrics again
+	resourceNames := []string{"Resource_A", "Resource_B", "Resource_C", "Resource_D", "Resource_E", "Resource_F", "Resource_G", "Resource_H"}
+
+	// Launch metric generation for each resource in separate goroutines
+	for _, resourceName := range resourceNames {
+		go func(resName string) {
+			for {
+				select {
+				case <-ctx.Done():
+					log.Printf("Stopping metric generation for %s", resName)
+					return
+				default:
+					generateMetrics(ctx, resName)
+					time.Sleep(1 * time.Second) // Simulate a delay between metric generations
+				}
+			}
+		}(resourceName)
 	}
+
+	// Channel to capture OS signals for graceful shutdown
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
+
+	s := <-c
+	log.Printf("Signal %s received, shutting down...", s)
+	cancel()                    // Notify all goroutines to stop
+	time.Sleep(2 * time.Second) // Give goroutines time to exit gracefully
+	log.Println("Application stopped.")
 }
