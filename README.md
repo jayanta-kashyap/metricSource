@@ -1,6 +1,5 @@
 # metricSource
-This repository contains an open-telemetry metrics generator
-metrics are emitted to the grpc endpoint: **0.0.0.0:4317**
+This repository contains an open-telemetry metrics generator. Metrics are emitted to the grpc endpoint: **0.0.0.0:4317**
 
 # metrics Generated
 * 10 different resource sets are generated at a time
