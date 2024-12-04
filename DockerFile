@@ -19,5 +19,6 @@ FROM alpine:latest
 # Copy the compiled binary from the builder image
 COPY --from=builder /bin/metric-simulator /bin/metric-simulator
 
-# Run the binary by default
-CMD ["/bin/metric-simulator"]
+# Set ENTRYPOINT and allow for passing flags
+ENTRYPOINT ["/bin/metric-simulator"]
+CMD []  # Empty CMD allows runtime flags to be passed
