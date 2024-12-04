@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"log"
 	"math/rand"
@@ -22,14 +23,8 @@ import (
 var exporterEndpoint string // Global variable to hold the OTLP exporter endpoint
 
 func init() {
-	// Read exporter endpoint from environment variable
-	exporterEndpoint = os.Getenv("EXPORTER_ENDPOINT")
-	if exporterEndpoint == "" {
-		exporterEndpoint = "0.0.0.0:4317" // Default value
-		log.Printf("No EXPORTER_ENDPOINT specified, using default: %s", exporterEndpoint)
-	} else {
-		log.Printf("Using EXPORTER_ENDPOINT: %s", exporterEndpoint)
-	}
+	// Define the flag for the exporter endpoint
+	flag.StringVar(&exporterEndpoint, "exporter-endpoint", "0.0.0.0:4317", "The endpoint for the OTLP exporter")
 }
 
 func generateRandomFloat() float64 {
@@ -106,6 +101,12 @@ func generateMetrics(ctx context.Context, resourceName string) {
 }
 
 func main() {
+	// Parse the flags to set the exporter endpoint
+	flag.Parse()
+
+	// Ensure the exporter endpoint is printed and used
+	log.Printf("Using EXPORTER_ENDPOINT: %s", exporterEndpoint)
+
 	defer func() {
 		if rcvErr := recover(); rcvErr != nil {
 			log.Printf("Recovered from panic with error: [%v]", rcvErr)
