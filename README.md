@@ -7,7 +7,7 @@ clone the repo and then run ```go run cmd/metric-simulator/main.go -exporter-end
 # Build the metricSource image
 clone the repo and then run ```docker build -t metric-simulator -f ./DockerFile .```
 
-# Sample otel collctor config to receive the emitted metrics
+# Sample otel collector config to receive the emitted metrics
 
 ```
 receivers:
