@@ -1,6 +1,6 @@
 # metricSource
 This repository contains an OpenTelemetry metrics generator. Metrics are emitted to the grpc endpoint: **0.0.0.0:4317** by default.<br/>
-You can send metrics to any service grpc endpoint by using the flag ```-exporter-endpoint=<YOUR_EXPORTER_EDNPOINT>```.
+You can send metrics to any service grpc endpoint by using the flag ```-exporter-endpoint=<YOUR_EXPORTER_ENDPOINT>```.
 
 # Test the metricSource in your local environment
 ## Build the metricSource image
