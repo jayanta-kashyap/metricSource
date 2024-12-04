@@ -19,13 +19,26 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 )
 
+var exporterEndpoint string // Global variable to hold the OTLP exporter endpoint
+
+func init() {
+	// Read exporter endpoint from environment variable
+	exporterEndpoint = os.Getenv("EXPORTER_ENDPOINT")
+	if exporterEndpoint == "" {
+		exporterEndpoint = "0.0.0.0:4317" // Default value
+		log.Printf("No EXPORTER_ENDPOINT specified, using default: %s", exporterEndpoint)
+	} else {
+		log.Printf("Using EXPORTER_ENDPOINT: %s", exporterEndpoint)
+	}
+}
+
 func generateRandomFloat() float64 {
 	return float64(rand.Intn(500)) / 100.0 // Generate random float between 0.00 and 5.00
 }
 
 func generateMetrics(ctx context.Context, resourceName string) {
 	exporter, err := otlpmetricgrpc.New(ctx,
-		otlpmetricgrpc.WithEndpoint("0.0.0.0:4317"),
+		otlpmetricgrpc.WithEndpoint(exporterEndpoint),
 		otlpmetricgrpc.WithInsecure(),
 	)
 	if err != nil {
