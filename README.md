@@ -2,7 +2,7 @@
 This repository contains an OpenTelemetry metrics generator. Metrics are emitted to the grpc endpoint: **0.0.0.0:4317** by default.<br/>
 You can send metrics to any service grpc endpoint by using the flag ```-exporter-endpoint=<YOUR_EXPORTER_EDNPOINT>```.
 
-# Test the metricSource in your local environment
+# Test the metricSource in your local macOS environment
 ## Build the metricSource image
 Clone the repo and then run ```docker build -t metric-simulator -f ./DockerFile .``` to build the **metric-simulator** image.
 ## Install an OpenTelemetry Collector
@@ -35,4 +35,5 @@ service:
 * Run the OpenTelemetry collector :<br/>
 ```otelcol-contrib --config otel-collector-config.yaml```
 ## Run the metric-simulator docker container to send metrics to your OpenTelemetry Collector
-```docker run -d metric-simulator -exporter-endpoint="host.docker.internal:4317"```
+```docker run -d metric-simulator -exporter-endpoint="host.docker.internal:4317"``` <br/><br/>
+Currently the exporter-endpoint is configured for a container to access a local macOS environment.
