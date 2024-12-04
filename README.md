@@ -1,11 +1,11 @@
 # metricSource
-This repository contains an open-telemetry metrics generator. Metrics are emitted to the grpc endpoint: **0.0.0.0:4317**
+This repository contains an open-telemetry metrics generator. Metrics are emitted to the grpc endpoint: **0.0.0.0:4317** by default.
+
+# Run the metricSourc
+clone the repo and then run **go run cmd/metric-simulator/main.go -exporter-endpoint=<YOUR_EXPORTER_EDNPOINT>** to send metrics to a custom endpoint.
 
 # Build the iamge
-clone the repo and then run **docker build -t metric-simulator -f /aboslute/path/to/DockerFile .**
-
-# Run the container
-docker run -d --name metric-simulator-container metric-simulator
+clone the repo and then run **docker build -t metric-simulator -f ./DockerFile .**
 
 # Sample otel collctor config to receive the emitted metrics
 
