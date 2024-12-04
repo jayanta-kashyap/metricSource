@@ -4,7 +4,7 @@ This repository contains an open-telemetry metrics generator. Metrics are emitte
 # Run the metricSourc
 clone the repo and then run **go run cmd/metric-simulator/main.go -exporter-endpoint=<YOUR_EXPORTER_EDNPOINT>** to send metrics to a custom endpoint.
 
-# Build the iamge
+# Build the metricSource image
 clone the repo and then run **docker build -t metric-simulator -f ./DockerFile .**
 
 # Sample otel collctor config to receive the emitted metrics
