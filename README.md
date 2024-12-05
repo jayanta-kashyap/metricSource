@@ -35,5 +35,5 @@ service:
 * Run the OpenTelemetry collector :<br/>
 ```otelcol-contrib --config otel-collector-config.yaml```
 ## Run the metric-simulator docker container to send metrics to your OpenTelemetry Collector
-```docker run -d metric-simulator -exporter-endpoint="host.docker.internal:4317"``` <br/><br/>
+```docker run -d metric-simulator -exporter-endpoint host.docker.internal:4317``` <br/><br/>
 Currently the exporter-endpoint is configured for a container to access a local macOS environment.
