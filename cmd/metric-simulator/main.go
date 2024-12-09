@@ -27,8 +27,9 @@ func init() {
 	flag.StringVar(&exporterEndpoint, "exporter-endpoint", "0.0.0.0:4317", "The endpoint for the OTLP exporter")
 }
 
+// generateRandomFloat generates a random float between 0.00 and 5.00
 func generateRandomFloat() float64 {
-	return float64(rand.Intn(500)) / 100.0 // Generate random float between 0.00 and 5.00
+	return float64(rand.Intn(1500000)) / 100.0 // Generate random float between 0.00 and 15000.00
 }
 
 func generateMetrics(ctx context.Context, resourceName string) {
@@ -63,9 +64,32 @@ func generateMetrics(ctx context.Context, resourceName string) {
 	otel.SetMeterProvider(meterProvider)
 	meter := meterProvider.Meter(strings.ToLower("meter-" + resourceName))
 
-	numMetrics := rand.Intn(10) + 1 // Random number of metrics between 1 and 10
+	numMetrics := rand.Intn(5) + 3 // Random number of metrics between 3 and 7
+
+	// Define custom histogram boundaries
+	boundaries := []float64{0.5, 1.0, 2.5, 5.0, 10.0, 100.0, 1000.0, 10000.0}
+
 	for i := 1; i <= numMetrics; i++ {
-		metricName := strings.ToLower(fmt.Sprintf("metric-%d", i))
+		var metricName string
+		// Define metric names based on resource names
+		switch resourceName {
+		case "web-service-a", "web-service-b":
+			metricName = fmt.Sprintf("%s-http_request_duration_seconds", resourceName)
+		case "order-service":
+			metricName = fmt.Sprintf("%s-order_count", resourceName)
+		case "inventory-service":
+			metricName = fmt.Sprintf("%s-db_query_duration_seconds", resourceName)
+		case "user-service":
+			metricName = fmt.Sprintf("%s-http_requests_total", resourceName)
+		case "payment-service":
+			metricName = fmt.Sprintf("%s-payment_processing_time_seconds", resourceName)
+		case "notification-service":
+			metricName = fmt.Sprintf("%s-queue_length", resourceName)
+		case "database-service":
+			metricName = fmt.Sprintf("%s-db_query_duration_seconds", resourceName)
+		default:
+			metricName = fmt.Sprintf("%s-metric-%d", resourceName, i)
+		}
 
 		gauge, err := meter.Float64Gauge(metricName)
 		if err != nil {
@@ -85,17 +109,51 @@ func generateMetrics(ctx context.Context, resourceName string) {
 			return
 		}
 
-		numDataPoints := rand.Intn(10) + 1
+		numDataPoints := rand.Intn(20) + 5 // Random number of data points between 5 and 25
+
+		// Initialize the bucket counts for each defined boundary
+		bucketCounts := make(map[string]int)
+
 		for j := 1; j <= numDataPoints; j++ {
+			// Generate a distinct value for each histogram bucket
 			value := generateRandomFloat()
+
+			// Generate a unique timestamp by adding a millisecond offset
+			uniqueTimestamp := time.Now().Add(time.Duration(j) * time.Millisecond)
+
+			// Record metrics with unique timestamps
 			gauge.Record(ctx, value)
-			log.Printf("Resource %s: Recorded gauge %s=%f", resourceName, metricName, value)
+			log.Printf("Resource %s: Recorded gauge %s=%f at %v", resourceName, metricName, value, uniqueTimestamp)
 
 			counter.Add(ctx, value)
-			log.Printf("Resource %s: Recorded counter %s=%f", resourceName, metricName, value)
+			log.Printf("Resource %s: Recorded counter %s=%f at %v", resourceName, metricName, value, uniqueTimestamp)
 
+			// Record value in histogram and categorize it into the appropriate bucket
 			histogram.Record(ctx, value)
-			log.Printf("Resource %s: Recorded histogram %s=%f", resourceName, metricName, value)
+			log.Printf("Resource %s: Recorded histogram %s=%f at %v", resourceName, metricName, value, uniqueTimestamp)
+
+			// Manually calculate which bucket the value belongs to and store it with a unique label
+			for idx, boundary := range boundaries {
+				// We can assign the value to each bucket with its own unique identifier
+				bucketKey := fmt.Sprintf("le%d-%f", idx+1, boundary)
+				if value <= boundary {
+					// Add a random number between 1 and 5 to simulate variability in the bucket count
+					bucketCounts[bucketKey] += rand.Intn(5) + 1
+					break
+				}
+			}
+			// If the value is larger than the highest boundary, assign it to the last bucket
+			if value > boundaries[len(boundaries)-1] {
+				bucketCounts[fmt.Sprintf("le%d-%f", len(boundaries)+1, boundaries[len(boundaries)-1])] += rand.Intn(5) + 1
+			}
+
+			// Add a small delay between each record
+			time.Sleep(50 * time.Millisecond)
+		}
+
+		// Log bucket counts for visibility with unique values per bucket
+		for bucket, count := range bucketCounts {
+			log.Printf("Resource %s: Histogram %s, bucket %s: count=%d", resourceName, metricName, bucket, count)
 		}
 	}
 }
@@ -118,7 +176,11 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	resourceNames := []string{"Resource_A", "Resource_B", "Resource_C", "Resource_D", "Resource_E", "Resource_F", "Resource_G", "Resource_H"}
+	resourceNames := []string{
+		"web-service-a", "web-service-b", "order-service",
+		"inventory-service", "user-service", "payment-service",
+		"notification-service", "database-service",
+	}
 
 	// Launch metric generation for each resource in separate goroutines
 	for _, resourceName := range resourceNames {
